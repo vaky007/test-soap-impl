@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="b6ef3c85-e107-4f0b-b40d-54f49bb98e3a" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="pythonscriptpocFlow" doc:id="94c08e55-9798-4345-9652-a67e7473abbe" >
+		<scheduler doc:name="Scheduler" doc:id="6a2f383f-b9de-4653-892b-e21aa2e8f443" >
+			<scheduling-strategy >
+				<fixed-frequency timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<ee:transform doc:name="Transform Message" doc:id="7d26f174-de5e-402d-953b-98d821147f76" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+"EmployeeDetails":{
+	"EmpId": "1234",
+	"FirstName":"Sachin",
+	"LastName":"Tendulkar"
+}
+
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<scripting:execute engine="ECMAScript" doc:name="Execute" doc:id="7aca008b-e4d0-47af-b063-ffbf0fba8017" >
+			<scripting:code ><![CDATA[# importing module
+from geopy.geocoders import Nominatim
+from timezonefinder import TimezoneFinder
+
+# initialize Nominatim API
+geolocator = Nominatim(user_agent="geoapiExercises")
+
+# input as a geek
+lad = "Dhaka"
+print("Location address:", lad)
+
+# getting Latitude and Longitude
+location = geolocator.geocode(lad)
+
+print("Latitude and Longitude of the said address:")
+print((location.latitude, location.longitude))
+
+# pass the Latitude and Longitude
+# into a timezone_at
+# and it return timezone
+obj = TimezoneFinder()
+
+# returns 'Europe/Berlin'
+result = obj.timezone_at(lng=location.longitude, lat=location.latitude)
+print("Time Zone : ", result)
+]]></scripting:code>
+			<scripting:parameters ><![CDATA[#[{FirstName:payload.EmployeeDetails.FirstName,LastName:payload.EmployeeDetails.LastName}]]]></scripting:parameters>
+		</scripting:execute>
+		<ee:transform doc:name="Transform Message" doc:id="583083af-bfb9-4e42-ad27-e5dca149aabd" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Total Length":payload
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="dbae0347-0a3d-4001-a2ba-8c0642f5377e" message="Total Length #[payload]" />
+	</flow>
+</mule>
